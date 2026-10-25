@@ -194,13 +194,13 @@ SESSION_SECRET=your_secure_random_secret
 DATABASE_URL=your_postgresql_connection_string
 # Alternatively, configure DATABASE_URL_POOLED.
 
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=https://neuron-71tk.onrender.com/
 
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_REDIRECT_URI=your_google_login_callback
 GOOGLE_GMAIL_REDIRECT_URI=your_gmail_callback
-GOOGLE_CALENDAR_REDIRECT_URI=your_calendar_callback
+GOOGLE_CALENDAR_REDIRECT_URI=your_calendar_callbac
 
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret

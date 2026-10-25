@@ -111,7 +111,7 @@ def gmail_callback(
     # --------------------------------------------------------
 
     return RedirectResponse(
-        url="http://localhost:5173/chat"
+        url="https://neuron-71tk.onrender.com/chat"
     )
 
 
