@@ -1,5 +1,5 @@
-
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, HTTPException, Depends, Header
+from app.core.firebase import verify_firebase_token
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 import requests
@@ -23,25 +23,55 @@ router = APIRouter()
 
 def get_current_user(
     request: Request,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    authorization: str = Header(default=None)
 ):
+    # Firebase authentication
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ", 1)[1]
+
+        try:
+            decoded_token = verify_firebase_token(token)
+        except Exception:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid Firebase token"
+            )
+
+        firebase_uid = decoded_token.get("uid")
+        email = decoded_token.get("email")
+
+        if not firebase_uid or not email:
+            raise HTTPException(
+                status_code=401,
+                detail="Firebase account details missing"
+            )
+
+        user = db.query(User).filter(User.email == email).first()
+
+        if not user:
+            user = User(
+                google_id=firebase_uid,
+                name=decoded_token.get("name") or email.split("@")[0],
+                email=email,
+                picture_url=decoded_token.get("picture")
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        return user
+
+    # Existing session authentication
     user_id = request.session.get("user_id")
 
     if not user_id:
-        raise HTTPException(
-            status_code=401,
-            detail="no user found, unauthorized"
-        )
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
-    user = db.query(User).filter(
-        User.id == user_id
-    ).first()
+    user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="user not found"
-        )
+        raise HTTPException(status_code=401, detail="User not found")
 
     return user
 

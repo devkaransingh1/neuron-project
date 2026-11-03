@@ -46,3 +46,12 @@ app.*.map.json
 
 # Environment variables
 .env
+firebase-service-account.json
+# Python virtual environment and cache
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local database
+*.dbi code poora bheja hai...wahan se batao
+**/build/

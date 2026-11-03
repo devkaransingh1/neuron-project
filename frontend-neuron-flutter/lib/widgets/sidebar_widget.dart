@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class SidebarWidget extends StatelessWidget {
   final String userName;
+  final String? profilePhotoUrl;
   final bool isDarkMode;
   final String selectedNavItem;
   final ValueChanged<String> onNavItemSelect;
@@ -14,6 +15,7 @@ class SidebarWidget extends StatelessWidget {
   const SidebarWidget({
     super.key,
     required this.userName,
+    this.profilePhotoUrl,
     required this.isDarkMode,
     required this.selectedNavItem,
     required this.onNavItemSelect,
@@ -238,17 +240,23 @@ class SidebarWidget extends StatelessWidget {
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 16,
-                  backgroundColor:
-                      isDarkMode ? const Color(0xFF2D333B) : const Color(0xFFE2E8F0),
-                  child: Text(
-                    userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                ),
+  radius: 16,
+  backgroundColor:
+      isDarkMode ? const Color(0xFF2D333B) : const Color(0xFFE2E8F0),
+  backgroundImage:
+      profilePhotoUrl != null && profilePhotoUrl!.isNotEmpty
+          ? NetworkImage(profilePhotoUrl!)
+          : null,
+  child: profilePhotoUrl == null || profilePhotoUrl!.isEmpty
+      ? Text(
+          userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.white : Colors.black87,
+          ),
+        )
+      : null,
+),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(

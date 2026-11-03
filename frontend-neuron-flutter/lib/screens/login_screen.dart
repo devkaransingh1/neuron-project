@@ -1,3 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../widgets/common_widgets.dart';
 
@@ -36,6 +38,28 @@ class _NeuronAuthPageState extends State<NeuronAuthPage> {
     super.dispose();
   }
 
+  Future<void> _saveUserToFirestore(
+    User user, {
+    required bool isNewUser,
+  }) async {
+    final userRef =
+        FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+    final data = <String, dynamic>{
+      'uid': user.uid,
+      'name': user.displayName ?? 'Neuron User',
+      'email': user.email,
+      'photoURL': user.photoURL,
+      'lastLoginAt': FieldValue.serverTimestamp(),
+    };
+
+    if (isNewUser) {
+      data['createdAt'] = FieldValue.serverTimestamp();
+    }
+
+    await userRef.set(data, SetOptions(merge: true));
+  }
+
   void _showNotification(String msg) {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -48,38 +72,136 @@ class _NeuronAuthPageState extends State<NeuronAuthPage> {
     );
   }
 
-  void _handleSubmit() {
-    if (isSignUp) {
-      if (_nameController.text.trim().isEmpty) {
-        _showNotification('Please enter your full name');
-        return;
-      }
-      if (_emailController.text.trim().isEmpty) {
-        _showNotification('Please enter your email');
-        return;
-      }
-      if (_passwordController.text.trim().isEmpty) {
-        _showNotification('Please enter a password');
-        return;
-      }
-      if (!agreeTerms || !agreePrivacy) {
-        _showNotification('Please accept the Terms and Privacy Policy');
-        return;
-      }
-      widget.onLoginSuccess(_nameController.text.trim());
-    } else {
-      if (_emailController.text.trim().isEmpty) {
-        _showNotification('Please enter your email address');
-        return;
-      }
-      if (_passwordController.text.trim().isEmpty) {
-        _showNotification('Please enter your password');
-        return;
-      }
-      final displayName = _emailController.text.split('@').first;
-      widget.onLoginSuccess(displayName.isNotEmpty ? displayName : 'TEAM');
+  Future<void> _handleSubmit() async {
+  if (isSignUp) {
+    if (_nameController.text.trim().isEmpty) {
+      _showNotification('Please enter your full name');
+      return;
+    }
+
+    if (_emailController.text.trim().isEmpty) {
+      _showNotification('Please enter your email');
+      return;
+    }
+
+    if (_passwordController.text.trim().isEmpty) {
+      _showNotification('Please enter a password');
+      return;
+    }
+
+    if (_passwordController.text.trim().length < 6) {
+      _showNotification('Password must be at least 6 characters');
+      return;
+    }
+
+    if (!agreeTerms || !agreePrivacy) {
+      _showNotification('Please accept the Terms and Privacy Policy');
+      return;
+    }
+  } else {
+    if (_emailController.text.trim().isEmpty ||
+        _passwordController.text.isEmpty) {
+      _showNotification('Please enter your email and password');
+      return;
     }
   }
+
+  try {
+    UserCredential credential;
+
+    if (isSignUp) {
+      credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      await credential.user?.updateDisplayName(
+        _nameController.text.trim(),
+      );
+    } else {
+      credential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+    }
+
+if (credential.user != null) {
+  await _saveUserToFirestore(
+    credential.user!,
+    isNewUser: isSignUp,
+  );
+}
+
+    final displayName = credential.user?.displayName ??
+        credential.user?.email?.split('@').first ??
+        'TEAM';
+
+    if (!mounted) return;
+
+    widget.onLoginSuccess(displayName);
+  } on FirebaseAuthException catch (e) {
+    if (!mounted) return;
+
+    switch (e.code) {
+      case 'email-already-in-use':
+        _showNotification('This email is already registered');
+        break;
+      case 'invalid-email':
+        _showNotification('Please enter a valid email address');
+        break;
+      case 'weak-password':
+        _showNotification('Please choose a stronger password');
+        break;
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-credential':
+        _showNotification('Invalid email or password');
+        break;
+      default:
+        _showNotification(e.message ?? 'Authentication failed');
+    }
+  } catch (e) {
+    if (!mounted) return;
+    _showNotification('Something went wrong. Please try again.');
+  }
+}
+
+Future<void> _handleGoogleSignIn() async {
+  try {
+    final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+    final UserCredential userCredential =
+        await FirebaseAuth.instance.signInWithPopup(googleProvider);
+        final user = userCredential.user;
+
+if (user != null) {
+  await _saveUserToFirestore(
+    user,
+    isNewUser: userCredential.additionalUserInfo?.isNewUser ?? false,
+  );
+}
+
+    final String displayName =
+        userCredential.user?.displayName ??
+        userCredential.user?.email?.split('@').first ??
+        'TEAM';
+
+    if (!mounted) return;
+
+    widget.onLoginSuccess(displayName);
+  } on FirebaseAuthException catch (e) {
+    if (!mounted) return;
+
+    _showNotification(
+      e.message ?? 'Google Sign-In failed',
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    _showNotification('Google Sign-In failed. Please try again.');
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -258,7 +380,8 @@ class _NeuronAuthPageState extends State<NeuronAuthPage> {
                         fillColor: fieldFillColor,
                         borderColor: borderColor,
                       ),
-                      const SizedBox(height: 12),                      // Checkboxes / Options
+                      const SizedBox(height: 12),
+                      // Checkboxes / Options
                       if (!isSignUp)
                         Wrap(
                           alignment: WrapAlignment.spaceBetween,
@@ -393,10 +516,7 @@ class _NeuronAuthPageState extends State<NeuronAuthPage> {
                           errorBuilder: (context, error, stackTrace) =>
                               const Icon(Icons.g_mobiledata, color: Colors.red, size: 20),
                         ),
-                        onTap: () {
-                          _showNotification('Logging in with Google...');
-                          widget.onLoginSuccess('TEAM');
-                        },
+                        onTap: _handleGoogleSignIn,
                         isDark: isDark,
                         borderColor: borderColor,
                         fillColor: fieldFillColor,

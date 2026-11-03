@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/sidebar_widget.dart';
 import '../widgets/common_widgets.dart';
 import 'landing_screen.dart';
@@ -33,6 +35,44 @@ class _NeuronDashboardState extends State<NeuronDashboard> {
   String selectedWorkspace = 'Personal';
   final TextEditingController _promptController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
+
+  Map<String, dynamic>? userProfile;
+bool isProfileLoading = true;
+
+@override
+void initState() {
+  super.initState();
+  _loadUserProfile();
+}
+
+Future<void> _loadUserProfile() async {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return;
+
+    final document = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    if (!mounted) return;
+
+    setState(() {
+      userProfile = document.data();
+      debugPrint('Neuron User Profile: $userProfile');
+      isProfileLoading = false;
+    });
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      isProfileLoading = false;
+    });
+
+    debugPrint('Error loading user profile: $e');
+  }
+}
 
   final List<Map<String, dynamic>> workspaces = [
     {'name': 'Personal', 'color': const Color(0xFF8B5CF6), 'badge': 'P'},
@@ -162,6 +202,7 @@ class _NeuronDashboardState extends State<NeuronDashboard> {
           // Sidebar
           SidebarWidget(
             userName: widget.userName,
+            profilePhotoUrl: userProfile?['photoURL'] as String?,
             isDarkMode: widget.isDarkMode,
             selectedNavItem: selectedNavItem,
             onNavItemSelect: (item) {
