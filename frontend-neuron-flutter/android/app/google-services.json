@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "916255071567",
+    "project_id": "neuron-backend-6fe67",
+    "storage_bucket": "neuron-backend-6fe67.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:916255071567:android:93ee33bb9c0ab404f7393a",
+        "android_client_info": {
+          "package_name": "com.example.neuron_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuaTKZ6v78Hx5ha_1Sge5_-Te-HdjDMOA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
